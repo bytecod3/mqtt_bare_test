@@ -7,11 +7,11 @@
 
 Adafruit_BMP085 bmp;
 
-#define MQTT_SERVER "192.168.55.237"
+#define MQTT_SERVER "192.168.1.117"
 #define MQTT_PORT 1883
 
-#define WIFI_SSID "Eduh"
-#define WIFI_PASSWORD "password2"
+#define WIFI_SSID "Gakibia-Unit3"
+#define WIFI_PASSWORD "password"
 
 WiFiClient wifi_client;
 PubSubClient mqtt_client(wifi_client);
@@ -33,10 +33,6 @@ void reconnect(){
       
       if (mqtt_client.connect(client_id.c_str())) {
         Serial.println("Connected to MQTT broker");
-
-        // subscribe to topic
-        // mqtt_client.subscribe("/swa/commands");
-        // mqtt_client.publish("pressure-data );
 
       }
   }
@@ -74,14 +70,6 @@ void printData(void* pvParameters){
   delay(10);
 }
 
-void reconnectMQTT(void* pvParameters){
-  while(true){
-    if (!mqtt_client.connected()){
-      reconnect();
-      mqtt_client.loop();
-    }
-  }
-}
 
 void transmitoverMQTT(void* pvParameters){
 
@@ -92,10 +80,11 @@ void transmitoverMQTT(void* pvParameters){
 
     if(xQueueReceive(pressure_queue, &p, portMAX_DELAY) == pdPASS){
       
-      sprintf(pressure_data, "%f", p);
+      sprintf(pressure_data, "%.2f", p);
 
       if(mqtt_client.publish("pressure-data", pressure_data)){
-        Serial.println("Data published");
+        mqtt_client.publish("pressure-data", pressure_data);
+
       } else{
         Serial.println("Data publish failed");
       }
@@ -109,8 +98,20 @@ void transmitoverMQTT(void* pvParameters){
   delay(10);
 }
 
+void blinker(void* pvParameters){
+  while(true){
+    digitalWrite(4, HIGH);
+    vTaskDelay(portTICK_PERIOD_MS / 1000);
+
+    digitalWrite(4, LOW);
+    vTaskDelay(portTICK_PERIOD_MS / 1000);
+  }
+}
+
 void setup() {
   Serial.begin(115200);
+  pinMode(4, OUTPUT);
+
   setup_mqtt();
 
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -162,19 +163,6 @@ void setup() {
   }
 
   if(xTaskCreate(
-    reconnectMQTT,
-    "reconnect MQTT",
-    2048,
-    NULL,
-    1,
-    NULL
-  ) == pdPASS){
-    Serial.println("Reconnect task creation success");
-  }else{
-    Serial.println("Reconnect task creation failed");
-  }
-
-  if(xTaskCreate(
     printData,
     "Print data",
     2048,
@@ -200,12 +188,28 @@ void setup() {
     Serial.println("Transmit task creation failed");
   }
 
+  if(xTaskCreate(
+    blinker,
+    "blinker",
+    2048,
+    NULL,
+    1,
+    NULL
+  ) == pdPASS){
+    Serial.println("Transmit data task creation success");
+  }else{
+    Serial.println("Transmit task creation failed");
+  }
+
+
+
 
 }
 
 void loop() {
-  
-
-  
+  if (!mqtt_client.connected()){
+      reconnect();
+      // mqtt_client.loop();
+    }
 
 }
