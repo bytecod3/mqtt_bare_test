@@ -104,9 +104,6 @@ void transmitoverMQTT(void* pvParameters){
       Serial.println("Data receiving failed");
     }
 
-
-    
-
   }
 
   delay(10);
@@ -176,6 +173,33 @@ void setup() {
   }else{
     Serial.println("Reconnect task creation failed");
   }
+
+  if(xTaskCreate(
+    printData,
+    "Print data",
+    2048,
+    NULL,
+    1,
+    NULL
+  ) == pdPASS){
+    Serial.println("Print data task creation success");
+  }else{
+    Serial.println("Print data task creation failed");
+  }
+
+  if(xTaskCreate(
+    transmitoverMQTT,
+    "transmit MQTT",
+    2048,
+    NULL,
+    1,
+    NULL
+  ) == pdPASS){
+    Serial.println("Transmit data task creation success");
+  }else{
+    Serial.println("Transmit task creation failed");
+  }
+
 
 }
 
